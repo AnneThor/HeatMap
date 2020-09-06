@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link rel="stylesheet" type="text/css" href="heatmap.css" />
+  <script type="text/javascript" src="../d3.min.js"></script>
+</head>
+
+<title>Heat Map</title>
+<body>
+  <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+
+  <script>
+    var heatData;
+    document.addEventListener('DOMContentLoaded', function() {
+      const req = new XMLHttpRequest();
+      req.open("GET", "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json");
+      req.send();
+      req.onload=function() {
+        let dataset = JSON.parse(req.responseText);
+        let monthlyVariance = dataset["monthlyVariance"];
+
+        var w = 1000;
+        var h = 600;
+        var padding = { left: 80, right: 60, top: 80, bottom: 100 };
+        var colorScheme = d3.scaleSequential().domain([1,10]).interpolator(d3.interpolateReds);
+
+        var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const baseTemp = dataset.baseTemperature;
+
+        var xMin = d3.min(monthlyVariance, d => d.year);
+        var xMax = d3.max(monthlyVariance, d => d.year);
+        const xScale = d3.scaleLinear()
+          .domain([xMin, xMax])
+          .range([padding.left, w-padding.right]);
+
+        var yMin = d3.min(monthlyVariance, d => d.month);
+        var yMax = d3.max(monthlyVariance, d => d.month);
+        const yScale = d3.scaleBand()
+          .domain([0,1,2,3,4,5,6,7,8,9,10,11])
+          .range([padding.top, h-padding.bottom]);
+
+        var svg = d3.select("body")
+          .append("svg")
+          .attr("width", w)
+          .attr("height", h);
+
+        svg.selectAll("rect")
+          .data(monthlyVariance)
+          .enter()
+          .append("rect")
+          .attr("class", "cell")
+          .attr("data-year", d => d["year"])
+          .attr("data-month", d => d["month"]-1)
+          .attr("data-temp", d => baseTemp + d["variance"])
+          .attr("x", (d,i) => xScale(d["year"]) )
+          .attr("y", function(d,i) {
+            var height = (h-padding.top-padding.bottom)/12;
+            return (d["month"]-1)*height+padding.top;
+          })
+          .attr("width", (w-padding.left-padding.right)/(monthlyVariance.length/12))
+          .attr("height", function(d,i) {
+            return (h-padding.top-padding.bottom)/12;
+          })
+          .style("fill", function(d) {return colorScheme(baseTemp + d["variance"])})
+          .on("mouseover", (d,i) => {
+            tooltip.transition()
+              .duration(200)
+              .attr("data-year", d["year"])
+              .attr("data-month", d["month"])
+              .attr("temperature", baseTemp+d["variance"])
+              .style("opacity", .9);
+            tooltip.html("Year: " + d["year"]+ "<br>Month: " + months[(d["month"]-1)] + "<br>Temperature: " + Math.round((baseTemp+d["variance"])*100)/100 + "<br>Variance: " + d["variance"])
+              .style("left", d3.event.pageX +20 + "px")
+              .style("top", d3.event.pageY -28 + "px");
+            })
+          .on("mouseout", function(d,i) {
+            tooltip.transition()
+            .duration(500)
+            .style("opacity", 0)
+          });
+
+        svg.append("text")
+          .attr("id", "title")
+          .text("Monthly Global Land-Surface Temperature (°C)")
+          .attr("x", w/2)
+          .attr("y", h*1/12)
+          .attr("text-anchor", "middle");
+
+        svg.append("text")
+          .attr("id", "description")
+          .html("From 1753-2015 | Base Temperature 8.66")
+          .attr("x", w/2)
+          .attr("y", h*1/9)
+          .attr("text-anchor", "middle");
+
+        var tooltip = d3.select("body")
+          .append("div")
+          .attr("id", "tooltip")
+          .style("opacity", 0);
+
+        const xAxis = d3.axisBottom(xScale).ticks((xMax-xMin)/10).tickFormat(d3.format("d"));
+        svg.append("g")
+          .attr("id", "x-axis")
+          .attr("transform", "translate(0, " + (h-padding.bottom) + ")")
+          .call(xAxis);
+
+        const yAxis = d3.axisLeft(yScale).tickFormat(function(d,i){return months[i]});
+        svg.append("g")
+          .attr("id", "y-axis")
+          .attr("transform", "translate(" + padding.left + ", 0)")
+          .call(yAxis);
+
+        var legendContainer = svg.append("g")
+          .attr("id", "legend")
+          .attr("x", legendStart)
+          .attr("y", h-50);
+
+        var minTemp = baseTemp + d3.min(monthlyVariance, d => d["variance"]);
+        var maxTemp = baseTemp + d3.max(monthlyVariance, d => d["variance"]);
+        var tempSpread = maxTemp-minTemp;
+        var legendStart = w*2/3-40;
+
+        for (let i=0; i<10; i++) {
+          legendContainer.append("rect")
+            .style("fill", colorScheme(tempSpread/10*i+minTemp))
+            .attr("class", "legend-scale")
+            .attr("x", legendStart+30*i)
+            .attr("y", h-50)
+            .attr("width", 30)
+            .attr("height", 15);
+          legendContainer.append("text")
+            .attr("class", "legend-text")
+            .attr("x", legendStart+30*i)
+            .attr("y", h-25)
+            .attr("text-anchor", "start")
+            .html(Math.round((tempSpread/10*i+minTemp)*100)/100);
+        }
+
+        legendContainer.append("text")
+          .html("Global Land-Surface Temperature (°C)")
+          .attr("class", "legend-key")
+          .attr("x", legendStart+30*2)
+          .attr("y", h-10);
+
+        svg.append("text")
+          .attr("class", "y-axis-label")
+          .html("Month")
+          .attr("x", -h/2)
+          .attr("y", 20)
+          .attr("transform", "rotate(-90)");
+
+      }
+    })
+
+  </script>
+
+
+<footer id="footer">
+  <p>Coded and Designed by Anne Thorsteinson 2020</p>
+</footer>
+</body>
+
+
+</html>
