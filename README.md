@@ -10,8 +10,6 @@ Used red scaling to make it **HOT**!
 
 ------------------------------------------------------------------------
 
-PROJECT TITLE: TributePage. 
-
+PROJECT TITLE: HeatMap. 
 VERSION or DATE: 1.0 [September 19, 2020]. 
-
 AUTHORS: Anne Thorsteinson. 
