@@ -1,6 +1,3 @@
-# HeatMap
-Heat map made with javascript and d3 libraries
-
 ------------------------------------------------------------------------
 Heat map made with JavaScript, utilizing d3 libraries for visualization
 
